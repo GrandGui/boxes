@@ -16,8 +16,20 @@ boxes.egg-info/
 documentation/src/generators.inc
 *.ipynb_checkpoints
 venv/
+.venv/
 .vscode/
 tracker.log
 *.isorted
+
+boxes.code-workspace.WSL.code-workspace
+
+# Python
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+
+# OS
 .DS_Store
 .venv/
