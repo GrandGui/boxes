@@ -18,25 +18,64 @@ from boxes.lids import LidSettings
 
 
 class StackableABox(Boxes):
-    """An improvement of simple Box with stackable features."""
+    """An improvement of simple Box with stackable and modular grooves."""
 
     description = "This box is kept as simple as ABox with stackable edge in every direction. The grooves are repeated to create a modular pattern"
 
     ui_group = "Box"
     ui_name = "Stackable A Box"
+    print("GENERATOR CALLED")
 
     def __init__(self) -> None:
         Boxes.__init__(self)
         self.addSettingsArgs(edges.FingerJointSettings)
-        self.addSettingsArgs(LidSettings)
-        self.buildArgParser("x", "y", "h", "outside", "bottom_edge")
+        self.addSettingsArgs(edges.GroovedSettings)
+        self.buildArgParser("outside")
+        self.argparser.add_argument(
+            "--M",action="store",type=float,default=50,
+            help="Module (base measure of length, width and height in mm)",
+        )
+        self.argparser.add_argument(
+            "--M_x",action="store",type=int,default=1,
+            help="Number of module in x dimension"
+        )
+        self.argparser.add_argument(
+            "--M_y",action="store",type=int,default=1,
+            help="Number of module in y dimension"
+        )
+        self.argparser.add_argument(
+            "--M_h",action="store",type=int,default=1,
+            help="Number of module in h dimension"
+       )
+        self.argparser.add_argument(
+            "--top_edge",
+            action="store",
+            type=ArgparseEdgeType("FhsezZ"),
+            choices=list("FhsezZ"),
+            default="z",
+            help="edge type for top edge",
+        )
+
+        self.argparser.add_argument(
+            "--bottom_edge",
+            action="store",
+            type=ArgparseEdgeType("FhsezZ"),
+            choices=list("FhsezZ"),
+            default="Z",
+            help="edge type for bottom edge",
+        )
 
     def render(self):
-        x, y, h = self.x, self.y, self.h
+        M = self.M
+        x, y, h = self.M_x * M, self.M_y * M, self.M_h * M
         t = self.thickness
 
-        t1, t2, t3, t4 = "eeee"
+        print("Render called")
+
+        t1 = t2 = t3 = t4 = self.edges.get(self.top_edge, self.edges["e"])
         b = self.edges.get(self.bottom_edge, self.edges["F"])
+
+        print(b)
         sideedge = "F" # if self.vertical_edges == "finger joints" else "h"
 
         if self.outside:
@@ -46,17 +85,17 @@ class StackableABox(Boxes):
 
         with self.saved_context():
             self.rectangularWall(x, h, [b, sideedge, t1, sideedge],
-                                 ignore_widths=[1, 6], move="up")
+                                 ignore_widths=[1, 6], move="up",label="Front Wall")
             self.rectangularWall(x, h, [b, sideedge, t3, sideedge],
-                                 ignore_widths=[1, 6], move="up")
+                                 ignore_widths=[1, 6], move="up",label="Back Wall")
 
             if self.bottom_edge != "e":
-                self.rectangularWall(x, y, "ffff", move="up")
+                self.rectangularWall(x, y, "ffff", move="up",label="Bottom Panel")
             self.lid(x, y)
 
         self.rectangularWall(x, h, [b, sideedge, t3, sideedge],
-                             ignore_widths=[1, 6], move="right only")
+                             ignore_widths=[1, 6], move="right only",label="Back Wall")
         self.rectangularWall(y, h, [b, "f", t2, "f"],
-                             ignore_widths=[1, 6], move="up")
+                             ignore_widths=[1, 6], move="up",label="Left Wall")
         self.rectangularWall(y, h, [b, "f", t4, "f"],
-                             ignore_widths=[1, 6], move="up")
+                             ignore_widths=[1, 6], move="up",label="Right Wall")
