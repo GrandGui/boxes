@@ -670,6 +670,9 @@ class Boxes:
         # Grooved Edge
         edges.GroovedSettings(self.thickness, True,
                               **self.edgesettings.get("Grooved", {})).edgeObjects(self)
+        # Modular Grooved Edge
+        edges.ModGroovedSettings(self.thickness, True,
+                              **self.edgesettings.get("ModGrooved", {})).edgeObjects(self)
         # Mounting Edge
         edges.MountingSettings(self.thickness, True,
                               **self.edgesettings.get("Mounting", {})).edgeObjects(self)
