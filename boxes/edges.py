@@ -659,6 +659,155 @@ class GroovedEdgeCounterPart(GroovedEdgeBase):
 
 
 #############################################################################
+####     Modular GroovedEdge
+#############################################################################
+
+class ModGroovedSettings(Settings):
+    """Settings for modular Grooved Edge
+Values:
+
+* absolute_params
+
+ * module : 50 : the module size (in mm)
+ * style : "arc" : the style of grooves
+ * tri_angle : 30 : the angle of triangular cuts
+ * arc_angle : 120 : the angle of arc cuts
+ * width : 10 : the width of each groove (in mm)
+ * inverse : False : invert the groove directions
+ * interleave : False : alternate the direction of grooves
+ * holedistance : 1.0 : distance from finger holes to bottom edge (multiples of thickness)
+"""
+
+    PARAM_ARC = "arc"
+    PARAM_FLAT = "flat"
+    PARAM_SOFTARC = "softarc"
+    PARAM_TRIANGLE = "triangle"
+
+    absolute_params = {
+        "style": (PARAM_ARC, PARAM_FLAT, PARAM_TRIANGLE, PARAM_SOFTARC),
+        "tri_angle": 30,
+        "arc_angle": 120,
+        "width": 10,
+        "inverse": False,
+        "interleave": False,
+        "module": 50.0,
+        "holedistance": 1.0,
+    }
+    
+    def edgeObjects(self, boxes, chars: str = "aA", add: bool = True):
+        edges = [ModGroovedEdge(boxes, self),
+                 ModGroovedEdgeCounterPart(boxes, self)]
+        return self._edgeObjects(edges, boxes, chars, add)
+
+
+class ModGroovedEdgeBase(BaseEdge):
+    def is_inverse(self) -> bool:
+        return self.settings.inverse != self.inverse
+
+    def groove_arc(self, width, angle: float = 90.0, inv: float = -1.0) -> None:
+        side_length = width / math.sin(math.radians(angle)) / 2
+        self.corner(inv * -angle)
+        self.corner(inv * angle, side_length)
+        self.corner(inv * angle, side_length)
+        self.corner(inv * -angle)
+
+    def groove_soft_arc(self, width, angle: float = 60.0, inv: float = -1.0) -> None:
+        side_length = width / math.sin(math.radians(angle)) / 4
+        self.corner(inv * -angle, side_length)
+        self.corner(inv * angle, side_length)
+        self.corner(inv * angle, side_length)
+        self.corner(inv * -angle, side_length)
+
+    def groove_triangle(self, width, angle: float = 45.0, inv: float = -1.0) -> None:
+        side_length = width / math.cos(math.radians(angle)) / 2
+        self.corner(inv * -angle)
+        self.edge(side_length)
+        self.corner(inv * 2 * angle)
+        self.edge(side_length)
+        self.corner(inv * -angle)
+
+    def __call__(self, length, **kw):
+        if length == 0.0:
+            return
+
+        def check_bounds(val, mn, mx, name):
+            if not mn <= val <= mx:
+                raise ValueError(f"{name} needs to be in [{mn}, {mx}] but is {val}")
+
+        style = self.settings.style
+        width = self.settings.width
+        module = self.settings.module
+        t = self.thickness
+        if self.outside : outside_length = length + 2 * t
+        else:
+            outside_length = length
+        count = max(1, int((outside_length) / module))
+
+        gap = module - width
+        margin = max(0,(length - (count-1)*gap - count*width) / 2)
+        interleave = self.settings.interleave
+
+        # check_bounds(width, 0, length, "width")
+        # check_bounds(margin, 0, 0.5, "margin")
+        # check_bounds(gap, 0, 1, "gap")
+
+        # Determine the initial inversion
+        inv = 1 if self.is_inverse() else -1
+        if interleave and self.inverse and count % 2 == 0:
+            inv = -inv
+
+        print("length=", length, " - style=" , style," - width=", 
+              width," - margin=", margin," - gap=", gap,
+              " - interleave=", interleave," - count=", count)
+
+        # The edge until the first groove
+        self.edge(margin, tabs=1)
+
+        # Grooves
+        for i in range(count):
+            if i > 0:
+                self.edge(gap)
+                if interleave:
+                    inv = -inv
+            if style == ModGroovedSettings.PARAM_FLAT:
+                self.edge(width)
+            elif style == ModGroovedSettings.PARAM_ARC:
+                angle = self.settings.arc_angle / 2
+                self.groove_arc(width, angle, inv)
+            elif style == ModGroovedSettings.PARAM_SOFTARC:
+                angle = self.settings.arc_angle / 2
+                self.groove_soft_arc(width, angle, inv)
+            elif style == ModGroovedSettings.PARAM_TRIANGLE:
+                angle = self.settings.tri_angle
+                self.groove_triangle(width, angle, inv)
+            else:
+                raise ValueError("Unknown modular GroovedEdge style: %s)" % style)
+
+        # The final edge
+        self.edge(margin, tabs=1)
+
+
+class ModGroovedEdge(ModGroovedEdgeBase):
+    description = """Edge with repeated grooves"""
+    char = 'a'
+    inverse = False
+
+
+class ModGroovedEdgeCounterPart(ModGroovedEdgeBase):
+    description = """Edge with repeated grooves (opposing side)"""
+    char = 'A'
+    inverse = True
+
+    def __call__(self, length, **kw):
+        s = self.settings
+        self.boxes.fingerHolesAt(
+            0,
+            s.holedistance * self.boxes.thickness + 0.5 * self.boxes.thickness,
+            length, 0)
+        super().__call__(length, **kw)
+
+
+#############################################################################
 ####     Gripping Edge
 #############################################################################
 
