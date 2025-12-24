@@ -756,10 +756,6 @@ class ModGroovedEdgeBase(BaseEdge):
         if interleave and self.inverse and count % 2 == 0:
             inv = -inv
 
-        print("length=", length, " - style=" , style," - width=", 
-              width," - margin=", margin," - gap=", gap,
-              " - interleave=", interleave," - count=", count)
-
         # The edge until the first groove
         self.edge(margin, tabs=1)
 
